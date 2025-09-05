@@ -1,1 +1,4 @@
-module.exports = (req, res) => { res.status(200).json({ pong: true }); };
+// api/ping.js (ESM)
+export default function handler(req, res) {
+  res.status(200).json({ pong: true });
+}
