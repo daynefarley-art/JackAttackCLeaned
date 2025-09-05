@@ -1,11 +1,15 @@
-const { Resend } = require('resend');
+// api/send-email.js (ESM)
+import { Resend } from 'resend';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // Normalize body (string or object)
     let payload = req.body;
     if (typeof payload === 'string') {
       try { payload = JSON.parse(payload || '{}'); } catch { payload = {}; }
@@ -31,4 +35,4 @@ module.exports = async (req, res) => {
   } catch (e) {
     return res.status(500).json({ error: e?.message || 'Unexpected error' });
   }
-};
+}
