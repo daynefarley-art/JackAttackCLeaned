@@ -1,7 +1,38 @@
-// Temporary stub to confirm route works
-export default function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+// api/send-email.js (ESM)
+import { Resend } from 'resend';
+
+export default async function handler(req, res) {
+  try {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    // Normalize body (string or object)
+    let payload = req.body;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload || '{}'); } catch { payload = {}; }
+    } else if (!payload) {
+      payload = {};
+    }
+
+    const { to, subject, csv, filename = 'jackattack_scores.csv', text } = payload;
+    if (!to || !csv) return res.status(400).json({ error: 'Missing "to" or "csv"' });
+
+    const base64 = Buffer.from(csv, 'utf8').toString('base64');
+
+    const r = await resend.emails.send({
+      from: 'Jack Attack Scorer <onboarding@resend.dev>',
+      to,
+      subject: subject || 'Jack Attack final score',
+      text: text || 'Final score attached as CSV.',
+      attachments: [{ filename, content: base64 }]
+    });
+
+    if (r?.error) return res.status(500).json({ error: r.error.message || 'Send failed' });
+    return res.status(200).json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ error: e?.message || 'Unexpected error' });
   }
-  return res.status(200).json({ ok: true });
 }
