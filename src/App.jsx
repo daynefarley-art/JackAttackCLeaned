@@ -73,25 +73,31 @@ export default function App(){
 
   const totals = useMemo(()=>ends.reduce((acc,e)=>{const r=scoreEnd(e,cfg);acc.a+=r.a;acc.b+=r.b;return acc},{a:0,b:0}),[ends,cfg]);
 
-  async function sendDirect(){
-    const to = "jackattackfarley@gmail.com";
-    const rows = buildCSVRows(teams, ends, cfg);
-    const csv = rowsToCSV(rows);
-    const subject = `Final score: ${teams.A} vs ${teams.B}`;
-    const filename = `jackattack_${teams.A}_vs_${teams.B}.csv`.replace(/\s+/g,'_');
-    try {
-      const resp = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, subject, csv, filename })
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data?.error || 'Send failed');
-      alert('Email sent! Check the inbox.');
-    } catch (e) {
-      alert('Send failed: ' + (e?.message || 'Unknown error'));
-    }
+ async function sendDirect(){
+  const to = "jackattackfarley@gmail.com";
+  const rows = buildCSVRows(teams, ends, cfg);
+  const csv = rowsToCSV(rows);
+  const subject = `Final score: ${teams.A} vs ${teams.B}`;
+  const filename = `jackattack_${teams.A}_vs_${teams.B}.csv`.replace(/\s+/g,'_');
+
+  try {
+    const resp = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, csv, filename })
+    });
+
+    const ctype = resp.headers.get('content-type') || '';
+    const isJSON = ctype.includes('application/json');
+    const data = isJSON ? await resp.json() : { error: await resp.text() };
+
+    if (!resp.ok) throw new Error(data?.error || `HTTP ${resp.status}`);
+
+    alert('Email sent! Check the inbox.');
+  } catch (e) {
+    alert('Send failed: ' + (e?.message || 'Unknown error'));
   }
+}
 
   function pushHistory(){setHistory(h=>[...h,{teams:JSON.stringify(teams),cfg:JSON.stringify(cfg),meta:JSON.stringify(meta),ends:JSON.stringify(ends)}].slice(-50))}
   function undo(){const last=history[history.length-1];if(!last)return;setHistory(history.slice(0,-1));setTeams(JSON.parse(last.teams));setCfg(JSON.parse(last.cfg));setMeta(JSON.parse(last.meta));setEnds(JSON.parse(last.ends));}
