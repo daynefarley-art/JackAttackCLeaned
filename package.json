@@ -20,3 +20,10 @@
     "vite": "^5.4.0"
   }
 }
+"dependencies": {
+  "resend": "^3.0.0",
+  "react": "...",
+  "react-dom": "...",
+  "framer-motion": "...",
+  "lucide-react": "..."
+}
