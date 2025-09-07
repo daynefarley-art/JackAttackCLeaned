@@ -175,11 +175,70 @@ export default function App(){
         <Card>
           <div className="flex items-center justify-between mb-2"><Label>Scoring Settings</Label><Settings className="w-4 h-4 opacity-60"/></div>
           <div className="grid grid-cols-3 gap-2">
-            <div><Label>Toucher (each)</Label><Input type="number" value={cfg.scoring.toucher} onChange={e=>{pushHistory();setCfg({...cfg,scoring:{...cfg.scoring,toucher:Number(e.target.value)}})}}/></div>
-            <div><Label>Crossover Shot</Label><Input type="number" value={cfg.scoring.crossoverShot} onChange={e=>{pushHistory();setCfg({...cfg,scoring:{...cfg.scoring,crossoverShot:Number(e.target.value)}})}}/></div>
-            <div><Label>1st Shot</Label><Input type="number" value={cfg.scoring.rankPoints.first} onChange={e=>{pushHistory();setCfg({...cfg,scoring:{...cfg.scoring,rankPoints:{...cfg.scoring.rankPoints,first:Number(e.target.value)}}})}}/></div>
-            <div><Label>2nd Shot</Label><Input type="number" value={cfg.scoring.rankPoints.second} onChange={e=>{pushHistory();setCfg({...cfg,scoring:{...cfg.scoring,rankPoints:{...cfg.scoring,rankPoints:{...cfg.scoring.rankPoints,second:Number(e.target.value)}}})}}/></div>
-            <div><Label>3rd Shot</Label><Input type="number" value={cfg.scoring.rankPoints.third} onChange={e=>{pushHistory();setCfg({...cfg,scoring:{...cfg.scoring,rankPoints:{...cfg.scoring.rankPoints,third:Number(e.target.value)}}})}}/></div>
+            <div>
+              <Label>Toucher (each)</Label>
+              <Input
+                type="number"
+                value={cfg.scoring.toucher}
+                onChange={e => {
+                  pushHistory();
+                  setCfg({ ...cfg, scoring: { ...cfg.scoring, toucher: Number(e.target.value) } });
+                }}
+              />
+            </div>
+            <div>
+              <Label>Crossover Shot</Label>
+              <Input
+                type="number"
+                value={cfg.scoring.crossoverShot}
+                onChange={e => {
+                  pushHistory();
+                  setCfg({ ...cfg, scoring: { ...cfg.scoring, crossoverShot: Number(e.target.value) } });
+                }}
+              />
+            </div>
+            <div>
+              <Label>1st Shot</Label>
+              <Input
+                type="number"
+                value={cfg.scoring.rankPoints.first}
+                onChange={e => {
+                  pushHistory();
+                  setCfg({
+                    ...cfg,
+                    scoring: { ...cfg.scoring, rankPoints: { ...cfg.scoring.rankPoints, first: Number(e.target.value) } }
+                  });
+                }}
+              />
+            </div>
+            <div>
+              <Label>2nd Shot</Label>
+              <Input
+                type="number"
+                value={cfg.scoring.rankPoints.second}
+                onChange={e => {
+                  pushHistory();
+                  setCfg({
+                    ...cfg,
+                    scoring: { ...cfg.scoring, rankPoints: { ...cfg.scoring.rankPoints, second: Number(e.target.value) } }
+                  });
+                }}
+              />
+            </div>
+            <div>
+              <Label>3rd Shot</Label>
+              <Input
+                type="number"
+                value={cfg.scoring.rankPoints.third}
+                onChange={e => {
+                  pushHistory();
+                  setCfg({
+                    ...cfg,
+                    scoring: { ...cfg.scoring, rankPoints: { ...cfg.scoring.rankPoints, third: Number(e.target.value) } }
+                  });
+                }}
+              />
+            </div>
           </div>
           <div className="text-xs opacity-70 mt-2">Tip: Set Crossover Shot to 0 if your event doesn’t use that bonus.</div>
         </Card>
@@ -198,7 +257,9 @@ export default function App(){
           return (
             <Card key={idx}>
               <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold flex items-center gap-2">End {e.number} {r.ultimate && (<span className="text-xs px-2 py-1 border rounded-xl">Ultimate End</span>)}</div>
+                <div className="font-semibold flex items-center gap-2">
+                  End {e.number} {r.ultimate && (<span className="text-xs px-2 py-1 border rounded-xl">Ultimate End</span>)}
+                </div>
                 <div className="text-sm opacity-70">{teams.A}: +{r.a} | {teams.B}: +{r.b}</div>
               </div>
               <div className="grid md:grid-cols-6 gap-2">
@@ -229,11 +290,4 @@ export default function App(){
                 </div>
                 <div>
                   <Label>2nd Shot (final)</Label>
-                  <select className="w-full px-3 py-2 rounded-xl border text-sm" value={e.second} onChange={ev=>updateEnd(idx,{second:ev.target.value})}>
-                    <option value=""></option>
-                    <option value="A">{teams.A}</option>
-                    <option value="B">{teams.B}</option>
-                  </select>
-                </div>
-                <div>
-                  <Label>3rd
+                  <select className="w
