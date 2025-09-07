@@ -1,5 +1,12 @@
-// api/send-email.js (ESM, returns clear errors)
+// api/send-email.js (ESM, clear error messages)
 import { Resend } from 'resend';
+
+function errToString(e) {
+  if (!e) return 'Unknown error';
+  if (typeof e === 'string') return e;
+  if (e.message) return e.message;
+  try { return JSON.stringify(e); } catch { return String(e); }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -22,15 +29,13 @@ export default async function handler(req, res) {
     }
 
     const { to, subject, csv, filename = 'jackattack_scores.csv', text } = payload || {};
-    if (!to || !csv) {
-      return res.status(400).json({ error: 'Missing "to" or "csv"' });
-    }
+    if (!to || !csv) return res.status(400).json({ error: 'Missing "to" or "csv"' });
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const base64 = Buffer.from(csv, 'utf8').toString('base64');
 
-    // NOTE: v3 returns { data, error }
+    // Resend v3 returns { data, error }
     const { data, error } = await resend.emails.send({
       from: 'Jack Attack Scorer <onboarding@resend.dev>',
       to,
@@ -40,11 +45,11 @@ export default async function handler(req, res) {
     });
 
     if (error) {
-      return res.status(502).json({ error: error.message || String(error) });
+      return res.status(502).json({ error: errToString(error) });
     }
 
     return res.status(200).json({ ok: true, id: data?.id || null });
   } catch (e) {
-    return res.status(500).json({ error: e?.message || 'Unexpected error' });
+    return res.status(500).json({ error: errToString(e) });
   }
 }
