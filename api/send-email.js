@@ -1,54 +1,63 @@
-// api/send-email.js (ESM, DIAGNOSTIC MODE — returns full plain-text details)
+// api/send-email.js (ESM, Vercel-compatible: no res.type)
 import { Resend } from 'resend';
 
-function dump(obj) {
-  try { return JSON.stringify(obj, Object.getOwnPropertyNames(obj)); }
-  catch { return String(obj); }
+function pickMsg(err) {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') return err;
+  if (err.message) return err.message;
+  if (err.error?.message) return err.error.message;
+  if (Array.isArray(err.errors) && err.errors[0]?.message) return err.errors[0].message;
+  return 'Unspecified error';
+}
+
+function sendJson(res, status, body) {
+  res.status(status);
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(body));
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).type('text/plain').send('Method not allowed (POST only)');
+    return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
   try {
-    // Read raw JSON body
+    // Read raw JSON body (Vercel Node functions don't auto-parse)
     let raw = '';
     for await (const chunk of req) raw += chunk;
 
     let payload = {};
     if (raw) {
       try { payload = JSON.parse(raw); }
-      catch { return res.status(400).type('text/plain').send(`Invalid JSON body:\n${raw}`); }
+      catch { return sendJson(res, 400, { error: 'Invalid JSON body' }); }
     }
 
     if (!process.env.RESEND_API_KEY) {
-      return res.status(500).type('text/plain').send('Missing RESEND_API_KEY env var');
+      return sendJson(res, 500, { error: 'Missing RESEND_API_KEY env var' });
     }
 
-    const { to, subject = 'Jack Attack Test', csv, filename = 'test.csv', text = 'CSV attached' } = payload || {};
+    const { to, subject, csv, filename = 'jackattack_scores.csv', text } = payload || {};
     if (!to || !csv) {
-      return res.status(400).type('text/plain').send(`Missing "to" or "csv". Payload was:\n${dump(payload)}`);
+      return sendJson(res, 400, { error: 'Missing "to" or "csv"' });
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
     const base64 = Buffer.from(csv, 'utf8').toString('base64');
 
-    const result = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'Jack Attack Scorer <onboarding@resend.dev>',
       to,
-      subject,
-      text,
+      subject: subject || 'Jack Attack final score',
+      text: text || 'Final score attached as CSV.',
       attachments: [{ filename, content: base64 }]
     });
 
-    // result is { data, error }
-    if (result?.error) {
-      return res.status(502).type('text/plain').send(`Resend error:\n${dump(result.error)}`);
+    if (error) {
+      return sendJson(res, 502, { error: pickMsg(error) });
     }
 
-    return res.status(200).type('text/plain').send(`OK\n${dump(result)}`);
+    return sendJson(res, 200, { ok: true, id: data?.id || null });
   } catch (e) {
-    return res.status(500).type('text/plain').send(`Crash:\n${dump(e)}`);
+    return sendJson(res, 500, { error: pickMsg(e) });
   }
 }
