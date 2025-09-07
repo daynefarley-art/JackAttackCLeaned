@@ -1,6 +1,18 @@
-// api/send-email.js (ESM, Vercel-compatible: no res.type)
+// api/send-email.js (ESM, returns full error details)
 import { Resend } from 'resend';
 
+function sendJson(res, status, body) {
+  res.status(status);
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(body));
+}
+function dumpError(err) {
+  try {
+    return JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+  } catch {
+    return { message: String(err) };
+  }
+}
 function pickMsg(err) {
   if (!err) return 'Unknown error';
   if (typeof err === 'string') return err;
@@ -10,19 +22,12 @@ function pickMsg(err) {
   return 'Unspecified error';
 }
 
-function sendJson(res, status, body) {
-  res.status(status);
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
   try {
-    // Read raw JSON body (Vercel Node functions don't auto-parse)
     let raw = '';
     for await (const chunk of req) raw += chunk;
 
@@ -53,11 +58,11 @@ export default async function handler(req, res) {
     });
 
     if (error) {
-      return sendJson(res, 502, { error: pickMsg(error) });
+      return sendJson(res, 502, { error: pickMsg(error), details: dumpError(error) });
     }
 
     return sendJson(res, 200, { ok: true, id: data?.id || null });
   } catch (e) {
-    return sendJson(res, 500, { error: pickMsg(e) });
+    return sendJson(res, 500, { error: pickMsg(e), details: dumpError(e) });
   }
 }
