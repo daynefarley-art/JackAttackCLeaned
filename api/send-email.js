@@ -1,19 +1,22 @@
-// api/send-email.js (ESM, crystal-clear errors)
+// api/send-email.js (ESM, verbose + JSON-safe errors)
 import { Resend } from 'resend';
 
-function pickErrorMessage(err) {
+// Safely turn any error into JSON
+function toJSONSafe(obj) {
   try {
-    if (!err) return 'Unknown error';
-    if (typeof err === 'string') return err;
-    if (err.message) return err.message;
-    // Resend sometimes nests details:
-    if (err.error?.message) return err.error.message;
-    if (Array.isArray(err.errors) && err.errors[0]?.message) return err.errors[0].message;
-    // Last resort: serialize all own props (even non-enumerable)
-    return JSON.stringify(err, Object.getOwnPropertyNames(err));
+    return JSON.parse(JSON.stringify(obj, Object.getOwnPropertyNames(obj)));
   } catch {
-    return String(err);
+    return { message: String(obj) };
   }
+}
+// Best-guess human message
+function pickMsg(err) {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') return err;
+  if (err.message) return err.message;
+  if (err.error?.message) return err.error.message;
+  if (Array.isArray(err.errors) && err.errors[0]?.message) return err.errors[0].message;
+  return 'Unspecified error';
 }
 
 export default async function handler(req, res) {
@@ -22,7 +25,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Read raw JSON body
+    // Read raw JSON body (Vercel Node func doesn't auto-parse)
     let raw = '';
     for await (const chunk of req) raw += chunk;
 
@@ -53,15 +56,18 @@ export default async function handler(req, res) {
     });
 
     if (error) {
-      const msg = pickErrorMessage(error);
-      console.error('Resend error:', error);
-      return res.status(502).json({ error: msg });
+      const details = toJSONSafe(error);
+      return res.status(502).json({
+        error: pickMsg(error),
+        name: details.name || undefined,
+        code: details.code || undefined,
+        details
+      });
     }
 
     return res.status(200).json({ ok: true, id: data?.id || null });
   } catch (e) {
-    const msg = pickErrorMessage(e);
-    console.error('send-email crash:', e);
-    return res.status(500).json({ error: msg });
+    const details = toJSONSafe(e);
+    return res.status(500).json({ error: pickMsg(e), details });
   }
 }
