@@ -1,4 +1,4 @@
-// api/send-email.js — LITE TEST: no attachment, hardcoded to allowed address
+// api/send-email.js — LITE TEST: no attachment, hardcoded recipient, CSV defaulted
 import { Resend } from 'resend';
 
 function sendJson(res, status, body) {
@@ -19,13 +19,14 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
 
   try {
-    // Read raw JSON body (we still accept it, but we won’t use 'to' here)
+    // Read raw JSON body (don’t fail if empty)
     let raw = '';
     for await (const chunk of req) raw += chunk;
+
     let payload = {};
     if (raw) {
       try { payload = JSON.parse(raw); }
-      catch { return sendJson(res, 400, { error: 'Invalid JSON body' }); }
+      catch { /* fall through with empty/defaults */ }
     }
 
     if (!process.env.RESEND_API_KEY) {
@@ -35,19 +36,18 @@ export default async function handler(req, res) {
     // HARD-CODED recipient to satisfy Resend trial restriction
     const toList = ['dayne.farley@gmail.com'];
 
-    // Build a plain-text body with the CSV (no attachment)
-    const subject = payload?.subject || 'Jack Attack Test';
-    const csv = payload?.csv || 'col1,col2\nA,B';
+    // Subject & CSV (defaults so empty body still works)
+    const subject = (payload?.subject || 'Jack Attack Test').toString();
+    const csv = (payload?.csv || 'team,score\nA,10\nB,8').toString();
+
     const text =
-`Final score attached below as text (lite mode).
------
+`Final score (inline, lite mode)
+
 ${csv}
 `;
 
     const resend = new Resend(process.env.RESEND_API_KEY);
-
-    // IMPORTANT: keep the test sender while unverified
-    const from = 'Jack Attack Scorer <onboarding@resend.dev>';
+    const from = 'Jack Attack Scorer <onboarding@resend.dev>'; // permitted test sender
 
     const { data, error } = await resend.emails.send({
       from,
@@ -57,7 +57,6 @@ ${csv}
     });
 
     if (error) return sendJson(res, 502, { error: msg(error), details: error });
-
     return sendJson(res, 200, { ok: true, id: data?.id || null });
   } catch (e) {
     return sendJson(res, 500, { error: msg(e) });
