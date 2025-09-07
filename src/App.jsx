@@ -98,7 +98,7 @@ export default function App(){
     const filename = `jackattack_${teams.A}_vs_${teams.B}.csv`.replace(/\s+/g,'_');
 
     try {
-      const resp = await fetch('/api/send-email', {
+      const resp = await fetch('/api/send-lite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to, subject, csv, filename })
