@@ -1,11 +1,19 @@
-// api/send-email.js (ESM, clear error messages)
+// api/send-email.js (ESM, crystal-clear errors)
 import { Resend } from 'resend';
 
-function errToString(e) {
-  if (!e) return 'Unknown error';
-  if (typeof e === 'string') return e;
-  if (e.message) return e.message;
-  try { return JSON.stringify(e); } catch { return String(e); }
+function pickErrorMessage(err) {
+  try {
+    if (!err) return 'Unknown error';
+    if (typeof err === 'string') return err;
+    if (err.message) return err.message;
+    // Resend sometimes nests details:
+    if (err.error?.message) return err.error.message;
+    if (Array.isArray(err.errors) && err.errors[0]?.message) return err.errors[0].message;
+    // Last resort: serialize all own props (even non-enumerable)
+    return JSON.stringify(err, Object.getOwnPropertyNames(err));
+  } catch {
+    return String(err);
+  }
 }
 
 export default async function handler(req, res) {
@@ -14,7 +22,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Read raw body (Vercel Node functions don't auto-parse)
+    // Read raw JSON body
     let raw = '';
     for await (const chunk of req) raw += chunk;
 
@@ -29,13 +37,13 @@ export default async function handler(req, res) {
     }
 
     const { to, subject, csv, filename = 'jackattack_scores.csv', text } = payload || {};
-    if (!to || !csv) return res.status(400).json({ error: 'Missing "to" or "csv"' });
+    if (!to || !csv) {
+      return res.status(400).json({ error: 'Missing "to" or "csv"' });
+    }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
-
     const base64 = Buffer.from(csv, 'utf8').toString('base64');
 
-    // Resend v3 returns { data, error }
     const { data, error } = await resend.emails.send({
       from: 'Jack Attack Scorer <onboarding@resend.dev>',
       to,
@@ -45,11 +53,15 @@ export default async function handler(req, res) {
     });
 
     if (error) {
-      return res.status(502).json({ error: errToString(error) });
+      const msg = pickErrorMessage(error);
+      console.error('Resend error:', error);
+      return res.status(502).json({ error: msg });
     }
 
     return res.status(200).json({ ok: true, id: data?.id || null });
   } catch (e) {
-    return res.status(500).json({ error: errToString(e) });
+    const msg = pickErrorMessage(e);
+    console.error('send-email crash:', e);
+    return res.status(500).json({ error: msg });
   }
 }
