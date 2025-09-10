@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
-import "./index.css"; // <-- crucial
+import "./index.css"; // <-- this line is crucial
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
